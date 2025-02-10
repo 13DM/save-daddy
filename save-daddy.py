@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Save Daddy Autosaving",
     "author": "Dad (13DM)",
-    "version": (1, 0, 2),
+    "version": (1, 0, 3),
     "blender": (3, 6, 5),
     "location": "Preferences > Add-ons",
     "description": ("Automatically autosaves your blend file every 5 minutes (default) "
@@ -14,6 +14,7 @@ bl_info = {
 import bpy
 import os
 from datetime import datetime
+from bpy.app.handlers import persistent
 
 # Global flag used to cancel the autosave timer when the add-on is disabled.
 autosave_running = True
@@ -85,7 +86,7 @@ class AutosavePreferences(bpy.types.AddonPreferences):
 
 # ---------------------------------------------------------------
 # Operator to Prompt the User to Save (only once per session)
-# We do this if the default path isn't provided. Otherwise user will not be prompted
+# We do this if the default path isn't provided. Otherwise user will not be prompted.
 # ---------------------------------------------------------------
 class AUTOSAVE_OT_PromptSave(bpy.types.Operator):
     """Prompt to Save Your Blend File"""
@@ -102,6 +103,10 @@ class AUTOSAVE_OT_PromptSave(bpy.types.Operator):
 # ---------------------------------------------------------------
 def autosave_timer():
     global autosave_running, has_prompted_save
+
+    # Debug print to verify the timer is running.
+    print("[Timed Autosave] Timer triggered")
+
     if not autosave_running:
         return None  # Returning None stops the timer.
 
@@ -127,8 +132,7 @@ def autosave_timer():
     install_dir = os.path.dirname(bpy.app.binary_path)
     install_dir = os.path.realpath(install_dir)
 
-    # We check if the path is in temp or the install directory (likely Program Files)
-    # We avoid here as temp gets cleared, and Program files can not be written to sometimes.
+    # Check if the path is in temp or the install directory.
     def in_forbidden_path(path):
         if not path:
             return False
@@ -158,7 +162,7 @@ def autosave_timer():
                 bpy.ops.wm.autosave_prompt_save('INVOKE_DEFAULT')
             return interval  # Skip this autosave cycle.
 
-    # Build the new filename with a 24 hour timestamp.
+    # Build the new filename with a 24-hour timestamp.
     timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M")
     new_filename = f"{base_name}_{timestamp}.blend"
     new_filepath = os.path.join(base_dir, new_filename)
@@ -205,6 +209,7 @@ def start_autosave_timer():
 # ---------------------------------------------------------------
 # Handler to Start Autosave When a File is Loaded
 # ---------------------------------------------------------------
+@persistent
 def load_post_handler(dummy):
     start_autosave_timer()
 
